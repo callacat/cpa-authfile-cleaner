@@ -1,0 +1,26 @@
+{
+  "name": "cpa-authfile-cleaner",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "cpa-authfile-cleaner": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "bundle": "esbuild src/index.ts --bundle --platform=node --format=cjs --target=node18 --outfile=build/index.cjs",
+    "dev": "pnpm build && node dist/index.js --config ./cleaner.config.json",
+    "release:all": "node scripts/build-release.mjs",
+    "start": "bash ./run.sh",
+    "lint": "node -e \"console.log('lint: add eslint if needed')\""
+  },
+  "dependencies": {
+    "p-limit": "^6.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "esbuild": "^0.27.4",
+    "pkg": "^5.8.1",
+    "typescript": "^5.8.0"
+  }
+}

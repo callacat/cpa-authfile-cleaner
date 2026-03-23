@@ -1,0 +1,11 @@
+{
+  "baseUrl": "https://your-host.example.com/v0/management",
+  "managementKey": "",
+  "mode": "status",
+  "dryRun": true,
+  "concurrency": 2,
+  "retries": 0,
+  "output": "report.json",
+  "onlyProvider": "codex",
+  "includeDisabled": false
+}

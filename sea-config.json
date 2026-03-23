@@ -1,0 +1,5 @@
+{
+  "main": "dist/index.js",
+  "output": "cpa-authfile-cleaner.sea.blob",
+  "disableExperimentalSeaWarning": true
+}
