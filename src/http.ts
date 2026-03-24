@@ -1,3 +1,5 @@
+import type { AuthFileStatusPayload } from './types.js';
+
 export type HttpClientOptions = {
   baseUrl: string; // e.g. https://host/v0/management
   managementKey: string;
@@ -17,32 +19,38 @@ export class HttpClient {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.opts.timeoutMs ?? 30_000);
 
-    const res = await fetch(this.url(path), {
-      method,
-      headers: {
-        accept: 'application/json',
-        ...(body === undefined ? {} : { 'content-type': 'application/json' }),
-        authorization: `Bearer ${this.opts.managementKey}`
-      },
-      body: body === undefined ? undefined : JSON.stringify(body),
-      signal: controller.signal
-    });
+    try {
+      const res = await fetch(this.url(path), {
+        method,
+        headers: {
+          accept: 'application/json',
+          ...(body === undefined ? {} : { 'content-type': 'application/json' }),
+          authorization: `Bearer ${this.opts.managementKey}`
+        },
+        body: body === undefined ? undefined : JSON.stringify(body),
+        signal: controller.signal
+      });
 
-    clearTimeout(timeout);
+      const text = await res.text();
+      const maybeJson = text ? safeJson(text) : null;
 
-    const text = await res.text();
-    const maybeJson = text ? safeJson(text) : null;
+      if (res.status < 200 || res.status >= 300) {
+        const err: any = new Error(
+          (maybeJson && (maybeJson.error?.message || maybeJson.message || maybeJson.error)) || `HTTP ${res.status}`
+        );
+        err.status = res.status;
+        err.data = maybeJson ?? text;
+        throw err;
+      }
 
-    if (res.status < 200 || res.status >= 300) {
-      const err: any = new Error(
-        (maybeJson && (maybeJson.error?.message || maybeJson.message || maybeJson.error)) || `HTTP ${res.status}`
-      );
-      err.status = res.status;
-      err.data = maybeJson ?? text;
-      throw err;
+      return (maybeJson ?? (text as any)) as T;
+    } finally {
+      clearTimeout(timeout);
     }
+  }
 
-    return (maybeJson ?? (text as any)) as T;
+  async setAuthDisabled(payload: AuthFileStatusPayload): Promise<void> {
+    await this.json('PATCH', '/auth-files/status', payload);
   }
 }
 

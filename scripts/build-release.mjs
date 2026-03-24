@@ -30,6 +30,13 @@ const targets = [
   }
 ];
 
+const requestedTargetIds = parseRequestedTargets(process.argv.slice(2));
+const selectedTargets = requestedTargetIds.length === 0 ? targets : targets.filter((target) => requestedTargetIds.includes(target.id));
+
+if (selectedTargets.length === 0) {
+  throw new Error(`No matching targets. Available targets: ${targets.map((target) => target.id).join(', ')}`);
+}
+
 await rm(join(root, 'build'), { recursive: true, force: true });
 await rm(join(root, 'releases'), { recursive: true, force: true });
 await rm(join(root, 'release-bundles'), { recursive: true, force: true });
@@ -51,18 +58,18 @@ await run('npx', [
   'pkg',
   'build/index.cjs',
   '-t',
-  targets.map((target) => target.pkgTarget).join(','),
+  selectedTargets.map((target) => target.pkgTarget).join(','),
   '--no-bytecode',
   '--public',
   '--out-path',
   'releases'
 ]);
 
-for (const target of targets) {
+for (const target of selectedTargets) {
   const bundleDir = join(root, 'release-bundles', target.id);
   await mkdir(bundleDir, { recursive: true });
 
-  const pkgOutputName = `index-${target.id}${target.id === 'win-x64' ? '.exe' : ''}`;
+  const pkgOutputName = getPkgOutputName(target.id, selectedTargets.length);
   const pkgOutputPath = join(root, 'releases', pkgOutputName);
   const binaryPath = join(bundleDir, target.binaryName);
 
@@ -100,4 +107,31 @@ async function run(command, args) {
       PKG_CACHE_PATH: join(root, 'pkg-cache')
     }
   });
+}
+
+function parseRequestedTargets(argv) {
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === '--target') {
+      return splitTargets(argv[i + 1] ?? '');
+    }
+    if (arg.startsWith('--target=')) {
+      return splitTargets(arg.slice('--target='.length));
+    }
+  }
+  return [];
+}
+
+function splitTargets(value) {
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function getPkgOutputName(targetId, targetCount) {
+  if (targetCount === 1) {
+    return targetId === 'win-x64' ? 'index.exe' : 'index';
+  }
+  return `index-${targetId}${targetId === 'win-x64' ? '.exe' : ''}`;
 }

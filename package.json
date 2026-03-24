@@ -11,6 +11,7 @@
     "bundle": "esbuild src/index.ts --bundle --platform=node --format=cjs --target=node18 --outfile=build/index.cjs",
     "dev": "pnpm build && node dist/index.js --config ./cleaner.config.json",
     "release:all": "node scripts/build-release.mjs",
+    "release:linux-arm64": "node scripts/build-release.mjs --target linux-arm64",
     "start": "bash ./run.sh",
     "lint": "node -e \"console.log('lint: add eslint if needed')\""
   },
