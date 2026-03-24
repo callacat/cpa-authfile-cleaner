@@ -8,9 +8,15 @@ portable-package/
 sea-test/
 
 cleaner.config.json
+auth-state.json
 report.json
 to-delete.txt
 backup-authfiles-*.json
+
+/cpa-authfile-cleaner
+/README.txt
+/PORTABLE.md
+/portable-run.sh
 
 *.log
 *.tgz
