@@ -4,7 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { HttpClient } from './http.js';
 import { createEmptyRunMetrics, writePrometheusTextfile } from './metrics.js';
-import { probeAuth } from './probe.js';
+import { DEFAULT_PROBE_URL, probeAuth, shouldForceProbeUrl } from './probe.js';
 import { compactState, createDefaultEntry, getStateEntry, hasStateChanged, loadState, saveState, upsertStateEntry } from './state.js';
 import type {
   ActionDecision,
@@ -119,6 +119,7 @@ async function main(): Promise<void> {
   metrics.stateRecovered = loadedState.recovered ? 1 : 0;
   const list = await client.json<AuthFilesResponse>('GET', '/auth-files');
   const listedFiles = list.files ?? [];
+  const probeUrl = await resolveProbeUrl(args, client, listedFiles);
   let files = listedFiles;
   if (!args.includeDisabled && args.mode !== 'recover') {
     files = files.filter((file) => !file.disabled);
@@ -129,7 +130,7 @@ async function main(): Promise<void> {
   }
 
   metrics.seenTotal = files.length;
-  const decisions = await runMode(args, client, state, files, metrics);
+  const decisions = await runMode({ ...args, probeUrl }, client, state, files, metrics);
   metrics.prunedStateEntriesTotal = compactState(state, listedFiles.map((file) => file.name));
 
   metrics.stateEntries = Object.keys(state.entries).length;
@@ -158,6 +159,7 @@ async function main(): Promise<void> {
     dryRun: args.dryRun,
     mode: args.mode,
     stateFile: args.stateFile,
+    probeUrl,
     stateSaved,
     stateChanged: Boolean(metrics.stateChanged),
     stateNormalized: Boolean(metrics.stateNormalized),
@@ -209,6 +211,20 @@ async function runMode(
     return runLegacy(args, client, files, metrics, args.mode);
   }
   return runReconcile(args, client, state, files, metrics);
+}
+
+async function resolveProbeUrl(args: Args, client: HttpClient, files: AuthFileItem[]): Promise<string | undefined> {
+  if (args.probeUrl) return args.probeUrl;
+  const probeCandidate = files.find((file) => file.auth_index !== undefined && file.auth_index !== null && file.auth_index !== '');
+  if (!probeCandidate) return undefined;
+  const requiresUrl = await shouldForceProbeUrl(client, probeCandidate.auth_index as number | string);
+  return requiresUrl ? getDefaultProbeUrlForProvider(probeCandidate) : undefined;
+}
+
+function getDefaultProbeUrlForProvider(file: AuthFileItem): string {
+  const provider = String(file.provider ?? file.type ?? '').toLowerCase();
+  if (provider === 'codex' || provider === 'openai') return DEFAULT_PROBE_URL;
+  return DEFAULT_PROBE_URL;
 }
 
 async function runLegacy(

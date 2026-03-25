@@ -40,11 +40,11 @@ Default mindset:
 - let the management side choose how to probe by default
 - `onlyProvider` and `probeUrl` are optional override knobs, not daily config
 
-Verified compatibility note:
+Compatibility note:
 
-- tested with CLI Proxy API `v6.9.1` and Management Center `v1.7.15`
-- when `probeUrl` is omitted, the tool sends `POST /api-call` without a `url` field
-- this version pair accepts that behavior, so the management side can choose the probe target automatically
+- tested old behavior: CLI Proxy API `v6.9.1` + Management Center `v1.7.15` accepts `POST /api-call` without `url`
+- tested new behavior: CLI Proxy API `v6.9.2` + Management Center `v1.7.16` returns `400 {"error":"missing url"}` when `url` is omitted
+- the tool now probes this once at startup and automatically falls back to a default probe URL when the management side requires it
 
 Code and support files:
 
@@ -229,7 +229,12 @@ Optional advanced overrides:
 - `onlyProvider`: process only one provider type; useful for staged cleanup or debugging
 - `probeUrl`: force one specific probe URL; useful only when you do not want the management side to choose automatically
 
-For the verified version pair above, the recommended default is to leave `probeUrl` unset.
+Default recommendation:
+
+- leave `probeUrl` unset first
+- if the management side accepts missing `url`, the tool lets management choose the target
+- if the management side rejects missing `url`, the tool auto-falls back for this run
+- set `probeUrl` manually only when you want to force a specific endpoint
 
 Management key fallback order:
 

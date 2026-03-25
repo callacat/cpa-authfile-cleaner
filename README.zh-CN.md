@@ -40,11 +40,11 @@
 - 默认先让管理端自己决定怎么探测
 - `onlyProvider` 和 `probeUrl` 是可选覆盖项，不是日常必填项
 
-已验证兼容性说明：
+兼容性说明：
 
-- 实测版本：CLI Proxy API `v6.9.1`，管理中心 `v1.7.15`
-- 当不填写 `probeUrl` 时，工具发给 `POST /api-call` 的 payload 里不会带 `url`
-- 这组版本可以正常接受这种行为，也就是可以由管理端自动决定探测目标
+- 已验证旧行为：CLI Proxy API `v6.9.1` + 管理中心 `v1.7.15`，可以接受不带 `url` 的 `POST /api-call`
+- 已验证新行为：CLI Proxy API `v6.9.2` + 管理中心 `v1.7.16`，如果不带 `url`，会返回 `400 {"error":"missing url"}`
+- 工具现在会在启动时只试一次，自动判断管理端是否要求 `url`，需要时自动回退到默认 probe 地址
 
 代码和支撑文件：
 
@@ -231,7 +231,12 @@ cp cleaner.config.example.json cleaner.config.json
 - `onlyProvider`：只处理某一种 provider；适合灰度清理或单独排查
 - `probeUrl`：强制指定探测地址；只有在你不想让管理端自动选择时才需要
 
-对于上面这组已验证版本，推荐默认不填写 `probeUrl`。
+默认建议：
+
+- 先不填写 `probeUrl`
+- 如果管理端支持省略 `url`，就继续让管理端自己决定探测目标
+- 如果管理端不支持，工具会在本轮自动回退到默认 probe 地址
+- 只有你想强制指定某个探测地址时，才手动填写 `probeUrl`
 
 `managementKey` 的兜底读取顺序：
 

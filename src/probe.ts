@@ -1,21 +1,26 @@
 import type { ApiCallPayload, ProbeResult } from './types.js';
 import { HttpClient } from './http.js';
 
+export const DEFAULT_PROBE_URL = 'https://api.openai.com/v1/models';
+
+export async function shouldForceProbeUrl(client: HttpClient, authIndex: number | string): Promise<boolean> {
+  const payload = buildProbePayload(authIndex);
+
+  try {
+    await client.json('POST', '/api-call', payload);
+    return false;
+  } catch (err: any) {
+    return isMissingUrlError(err);
+  }
+}
+
 export async function probeAuth(
   client: HttpClient,
   authIndex: number | string,
   provider?: string,
   probeUrl?: string
 ): Promise<ProbeResult> {
-  const payload: ApiCallPayload = {
-    auth_index: authIndex,
-    method: 'GET',
-    ...(probeUrl ? { url: probeUrl } : {}),
-    header: {
-      // placeholder; server-side tool will substitute/forward if needed
-      'User-Agent': 'cpa-authfile-cleaner'
-    }
-  };
+  const payload = buildProbePayload(authIndex, probeUrl);
 
   const startedAt = Date.now();
 
@@ -35,6 +40,32 @@ export async function probeAuth(
       durationMs: Date.now() - startedAt,
       errorKind: classifyError(err)
     };
+  }
+}
+
+function buildProbePayload(authIndex: number | string, probeUrl?: string): ApiCallPayload {
+  return {
+    auth_index: authIndex,
+    method: 'GET',
+    ...(probeUrl ? { url: probeUrl } : {}),
+    header: {
+      // placeholder; server-side tool will substitute/forward if needed
+      'User-Agent': 'cpa-authfile-cleaner'
+    }
+  };
+}
+
+function isMissingUrlError(error: unknown): boolean {
+  if (normalizeStatus((error as { status?: unknown } | undefined)?.status) !== 400) return false;
+  return describeErrorPayload((error as { data?: unknown } | undefined)?.data ?? error).includes('missing url');
+}
+
+function describeErrorPayload(value: unknown): string {
+  if (typeof value === 'string') return value.toLowerCase();
+  try {
+    return JSON.stringify(value).toLowerCase();
+  } catch {
+    return String(value ?? '').toLowerCase();
   }
 }
 
