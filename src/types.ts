@@ -42,15 +42,31 @@ export type StructuredErrorLike = {
 
 export type ApiErrorShape = StructuredErrorLike;
 
+export type ProbeFailureKind =
+  | 'upstream_401'
+  | 'upstream_rate_limit'
+  | 'upstream_quota'
+  | 'upstream_http'
+  | 'management_http'
+  | 'network'
+  | 'timeout'
+  | 'unknown';
+
 export type ProbeResult =
-  | { ok: true; status?: number; durationMs: number }
+  | { ok: true; status?: number; outerStatus?: number; upstreamStatus?: number; durationMs: number }
   | {
       ok: false;
       status?: number;
+      outerStatus?: number;
+      upstreamStatus?: number;
       status401: boolean;
+      rateLimited: boolean;
+      quotaExceeded: boolean;
       raw: unknown;
       durationMs: number;
       errorKind: 'http' | 'network' | 'timeout' | 'unknown';
+      failureKind: ProbeFailureKind;
+      reason: string;
     };
 
 export type DecisionAction = 'keep' | 'delete' | 'disable' | 'enable' | 'skip';

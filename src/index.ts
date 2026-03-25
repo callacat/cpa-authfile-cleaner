@@ -597,7 +597,11 @@ function isSuspicious(file: AuthFileItem, entry?: AuthStateEntry): boolean {
 
 function describeNon401Failure(probe: Awaited<ReturnType<typeof probeAuth>>): string {
   if (probe.ok) return 'probe ok';
-  if (probe.status !== undefined) return `probe failed status=${probe.status}`;
+  if (probe.quotaExceeded) return probe.reason;
+  if (probe.rateLimited) return probe.reason;
+  if (probe.upstreamStatus !== undefined) return probe.reason;
+  if (probe.outerStatus !== undefined) return probe.reason;
+  if (probe.status !== undefined) return probe.reason;
   return `probe failed kind=${probe.errorKind}`;
 }
 

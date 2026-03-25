@@ -25,6 +25,12 @@ If you only remember one rule:
 - not `401`, but still unhealthy -> disable first
 - healthy again later -> re-enable only after repeated success
 
+Important detail:
+
+- probe success is now judged from the real `/api-call` response body, not only the outer HTTP status from the management API
+- upstream `401` still means delete
+- upstream `429`, quota errors, and other upstream `4xx/5xx` responses count as probe failures
+
 ## Which file does what
 
 Files most people care about:
@@ -72,6 +78,13 @@ Recommended default.
 - Deletes auths confirmed as `401`
 - Disables auths with non-`401` probe failures
 - Keeps local history in `auth-state.json`
+
+What counts as a probe failure here:
+
+- management-side transport errors
+- upstream `429` / rate limit
+- upstream quota / billing exhaustion
+- other upstream `4xx/5xx`
 
 ### `recover`
 
@@ -293,6 +306,13 @@ Base path: `.../v0/management`
 - `DELETE /auth-files?name=<file.json>`
 - `POST /api-call`
 - `PATCH /auth-files/status`
+
+`/api-call` note:
+
+- the tool reads both the outer management HTTP status and the returned upstream payload
+- outer `200` does not automatically mean the auth is healthy
+- if the payload contains upstream `status_code: 401`, that auth is treated as unauthorized
+- if the payload contains upstream `429`, quota errors, or other upstream failures, that auth is treated as unhealthy but not deleted
 
 ## Scheduling
 
